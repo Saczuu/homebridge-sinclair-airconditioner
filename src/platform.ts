@@ -1,33 +1,16 @@
-import {
-  API,
-  DynamicPlatformPlugin,
-  Logger,
-  PlatformAccessory,
-  PlatformConfig,
-} from 'homebridge';
+import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service } from 'homebridge';
 import { SinclairAccessory } from './accessory';
-import { SinclairApi } from './sinclairApi';
 
-export class SinclairAirconditionerPlatform implements DynamicPlatformPlugin {
-  public readonly accessories: PlatformAccessory[] = [];
+export class SinclairPlatform implements DynamicPlatformPlugin {
+  private readonly accessories: PlatformAccessory[] = [];
 
   constructor(
     public readonly log: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API
   ) {
-    // v1/v2 compatible log
-    const logAny = this.log as unknown as
-      | ((msg: string, ...args: any[]) => void)
-      | { info?: (msg: string, ...args: any[]) => void; error?: (msg: string, ...args: any[]) => void };
-
     this.api.on('didFinishLaunching', () => {
-      if (typeof logAny === 'function') {
-        logAny('SinclairAirconditioner: Finished launching');
-      } else {
-        logAny?.info?.('SinclairAirconditioner: Finished launching');
-      }
-
+      this.log('SinclairAirconditioner platform launched');
       this.discoverDevices();
     });
   }
@@ -37,40 +20,24 @@ export class SinclairAirconditionerPlatform implements DynamicPlatformPlugin {
   }
 
   private discoverDevices() {
-    if (!this.config.host) {
-      const logAny = this.log as unknown as
-        | ((msg: string, ...args: any[]) => void)
-        | { info?: (msg: string, ...args: any[]) => void; error?: (msg: string, ...args: any[]) => void };
+    const name = this.config.name || 'Sinclair AC';
+    const host = this.config.host;
 
-      if (typeof logAny === 'function') {
-        logAny('SinclairAirconditioner: No host configured');
-      } else {
-        logAny?.error?.('SinclairAirconditioner: No host configured');
-      }
+    if (!host) {
+      this.log.error('Missing host IP for Sinclair AC');
       return;
     }
 
-    const uuid = this.api.hap.uuid.generate(this.config.host);
+    const uuid = this.api.hap.uuid.generate(host);
+    let accessory = this.accessories.find(a => a.UUID === uuid);
 
-    const accessory = new this.api.platformAccessory(
-      this.config.name || 'Sinclair AC',
-      uuid
-    );
-
-    // Create API client
-    const apiClient = new SinclairApi({
-      host: this.config.host,
-      debug: this.config.debug,
-    });
-
-    // Pass log to accessory for v1/v2 compatibility
-    new SinclairAccessory(accessory, apiClient, this.log, this.api);
-
-    // Register accessory
-    this.api.registerPlatformAccessories(
-      'homebridge-sinclair-airconditioner',
-      'SinclairAirconditioner',
-      [accessory]
-    );
+    if (!accessory) {
+      accessory = new this.api.platformAccessory(name, uuid);
+      new SinclairAccessory(accessory, this.log, host);
+      this.api.registerPlatformAccessories('homebridge-sinclair-airconditioner', 'SinclairAirconditioner', [accessory]);
+      this.accessories.push(accessory);
+    } else {
+      new SinclairAccessory(accessory, this.log, host);
+    }
   }
 }

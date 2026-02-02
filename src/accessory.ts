@@ -1,83 +1,130 @@
-import { PlatformAccessory, CharacteristicValue, Logger, API } from 'homebridge';
-import { SinclairApi } from './sinclairApi';
+import { PlatformAccessory, Service, CharacteristicValue, Logger } from 'homebridge';
+import { SinclairAPI, DeviceState } from './sinclairApi';
 
 export class SinclairAccessory {
-  private service: any;
-  private Characteristic: any;
+  private service: Service;
+  private api: SinclairAPI;
 
   constructor(
-    private accessory: PlatformAccessory,
-    private apiClient: SinclairApi,
-    private log: Logger,
-    private api?: API // optional for v2 support
+    private readonly accessory: PlatformAccessory,
+    private readonly log: Logger,
+    host: string
   ) {
-    // Dual v1/v2 Service and Characteristic
-    const ServiceValue = this.api?.hap?.Service || require('homebridge').Service;
-    this.Characteristic = this.api?.hap?.Characteristic || require('homebridge').Characteristic;
-
-    // Add or get HeaterCooler service
     this.service =
-      this.accessory.getService(ServiceValue.HeaterCooler) ||
-      this.accessory.addService(ServiceValue.HeaterCooler);
+      this.accessory.getService(Service.HeaterCooler) ||
+      this.accessory.addService(Service.HeaterCooler);
 
-    // Bind characteristics
-    this.service.getCharacteristic(this.Characteristic.Active)
-      .onSet(this.setActive.bind(this));
+    this.service.setCharacteristic(Service.Characteristic.Name, accessory.displayName);
 
-    this.service.getCharacteristic(this.Characteristic.CurrentHeaterCoolerState)
+    this.api = new SinclairAPI({ host });
+
+    this.api.on('connected', (device: DeviceState) => {
+      this.log(`Connected to Sinclair AC: ${device.name}`);
+      this.updateCharacteristics();
+    });
+
+    this.api.on('status', () => this.updateCharacteristics());
+    this.api.on('update', () => this.updateCharacteristics());
+    this.api.on('error', err => this.log('Sinclair API error:', err));
+
+    this.configureCharacteristics();
+  }
+
+  private configureCharacteristics() {
+    // Active On/Off
+    this.service
+      .getCharacteristic(Service.Characteristic.Active)
+      .onSet(this.setActive.bind(this))
+      .onGet(this.getActive.bind(this));
+
+    // Current / Target HeaterCooler state
+    this.service
+      .getCharacteristic(Service.Characteristic.CurrentHeaterCoolerState)
       .onGet(this.getCurrentState.bind(this));
 
-    this.service.getCharacteristic(this.Characteristic.TargetHeaterCoolerState)
-      .onSet(this.setTargetState.bind(this));
+    this.service
+      .getCharacteristic(Service.Characteristic.TargetHeaterCoolerState)
+      .onSet(this.setTargetState.bind(this))
+      .onGet(this.getTargetState.bind(this));
 
-    this.service.getCharacteristic(this.Characteristic.RotationSpeed)
-      .onSet(this.setFanSpeed.bind(this));
-
-    // Create a dual-typed log for v1/v2
-    const logAny = this.log as unknown as
-      | ((msg: string, ...args: any[]) => void)
-      | { info?: (msg: string, ...args: any[]) => void; error?: (msg: string, ...args: any[]) => void };
-
-    // Event listeners
-    this.apiClient.on('connected', () => {
-      if (typeof logAny === 'function') {
-        logAny('Connected to Sinclair AC');
-      } else {
-        logAny?.info?.('Connected to Sinclair AC');
-      }
-    });
-
-    this.apiClient.on('error', (err) => {
-      if (typeof logAny === 'function') {
-        logAny('Sinclair API error:', err);
-      } else {
-        logAny?.error?.('Sinclair API error:', err);
-      }
-    });
+    // Rotation speed / fan
+    this.service
+      .getCharacteristic(Service.Characteristic.RotationSpeed)
+      .onSet(this.setFanSpeed.bind(this))
+      .onGet(this.getFanSpeed.bind(this));
   }
 
-  private async setActive(value: CharacteristicValue) {
-    await this.apiClient.sendCommand({ cmd: 'set_power', value: value ? 1 : 0 });
+  private updateCharacteristics() {
+    const device = this.api.getDevice();
+
+    // Active
+    this.service.updateCharacteristic(
+      Service.Characteristic.Active,
+      device.props['power'] ? 1 : 0
+    );
+
+    // Current / Target state
+    const mode = device.props['mode'];
+    let state = Service.Characteristic.CurrentHeaterCoolerState.INACTIVE;
+    let target = Service.Characteristic.TargetHeaterCoolerState.AUTO;
+
+    if (mode === 1) {
+      state = Service.Characteristic.CurrentHeaterCoolerState.HEAT;
+      target = Service.Characteristic.TargetHeaterCoolerState.HEAT;
+    } else if (mode === 2) {
+      state = Service.Characteristic.CurrentHeaterCoolerState.COOL;
+      target = Service.Characteristic.TargetHeaterCoolerState.COOL;
+    }
+
+    this.service.updateCharacteristic(
+      Service.Characteristic.CurrentHeaterCoolerState,
+      state
+    );
+    this.service.updateCharacteristic(
+      Service.Characteristic.TargetHeaterCoolerState,
+      target
+    );
+
+    // Fan speed
+    this.service.updateCharacteristic(
+      Service.Characteristic.RotationSpeed,
+      device.props['fanSpeed'] || 0
+    );
   }
 
-  private async setTargetState(value: CharacteristicValue) {
-    const modeMap: { [key: number]: string } = {
-      0: 'auto', // AUTO
-      1: 'cool', // COOL
-      2: 'heat', // HEAT
-      3: 'dry',  // DRY
-      4: 'fan'   // FAN
-    };
-    const mode = modeMap[value as number] || 'auto';
-    await this.apiClient.sendCommand({ cmd: 'set_mode', mode });
+  // Characteristic handlers
+  async setActive(value: CharacteristicValue) {
+    this.api.setPower(value === 1);
   }
 
-  private async setFanSpeed(value: CharacteristicValue) {
-    await this.apiClient.sendCommand({ cmd: 'set_fan', speed: value as number });
+  async getActive(): Promise<CharacteristicValue> {
+    return this.api.getPower() ? 1 : 0;
   }
 
-  private async getCurrentState(): Promise<CharacteristicValue> {
-    // Could map real API state here; default to AUTO
-    return 0;
+  async setTargetState(value: CharacteristicValue) {
+    const mode = value === Service.Characteristic.TargetHeaterCoolerState.HEAT ? 1 : 2;
+    this.api.setMode(mode);
+  }
+
+  async getTargetState(): Promise<CharacteristicValue> {
+    const mode = this.api.getMode();
+    return mode === 1
+      ? Service.Characteristic.TargetHeaterCoolerState.HEAT
+      : Service.Characteristic.TargetHeaterCoolerState.COOL;
+  }
+
+  async getCurrentState(): Promise<CharacteristicValue> {
+    const mode = this.api.getMode();
+    return mode === 1
+      ? Service.Characteristic.CurrentHeaterCoolerState.HEAT
+      : Service.Characteristic.CurrentHeaterCoolerState.COOL;
+  }
+
+  async setFanSpeed(value: CharacteristicValue) {
+    this.api.setFanSpeed(Number(value));
+  }
+
+  async getFanSpeed(): Promise<CharacteristicValue> {
+    return this.api.getFanSpeed();
   }
 }
