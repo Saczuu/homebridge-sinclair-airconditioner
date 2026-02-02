@@ -1,4 +1,4 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service } from 'homebridge';
+import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 import { SinclairAccessory } from './accessory';
 import { SinclairApi } from './sinclairApi';
 
@@ -31,9 +31,13 @@ export class SinclairAirconditionerPlatform implements DynamicPlatformPlugin {
       debug: this.config.debug
     });
 
-    new SinclairAccessory(accessory, apiClient, this.log);
+    new SinclairAccessory(accessory, apiClient, this.log, this.api);
 
-    this.api.registerPlatformAccessories('homebridge-sinclair-airconditioner', 'SinclairAirconditioner', [accessory]);
+    this.api.registerPlatformAccessories(
+      'homebridge-sinclair-airconditioner',
+      'SinclairAirconditioner',
+      [accessory]
+    );
   }
 
   configureAccessory(accessory: PlatformAccessory) {

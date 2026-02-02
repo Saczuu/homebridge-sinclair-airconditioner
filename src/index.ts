@@ -1,9 +1,6 @@
 import { API } from 'homebridge';
-import { SinclairPlatform } from './platform';
+import { SinclairAirconditionerPlatform } from './platform';
 
 export = (api: API) => {
-  api.registerPlatform(
-    'SinclairAirconditioner',
-    SinclairPlatform,
-  );
+  api.registerPlatform('homebridge-sinclair-airconditioner', SinclairAirconditionerPlatform);
 };
