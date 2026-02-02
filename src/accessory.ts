@@ -1,93 +1,62 @@
-import { API, PlatformAccessory, CharacteristicValue, Logger } from 'homebridge';
-import { SinclairApi, SinclairState } from './sinclairApi';
+import { PlatformAccessory, Service, CharacteristicValue, Logger } from 'homebridge';
+import { SinclairApi } from './sinclairApi';
 
 export class SinclairAccessory {
-  constructor(
-    private readonly accessory: PlatformAccessory,
-    private readonly apiClient: SinclairApi,
-    private readonly config: any,
-    private readonly api: API,
-    private readonly log: Logger
-  ) {}
+  private readonly accessory: PlatformAccessory;
+  private readonly apiClient: SinclairApi;
+  private readonly log: Logger;
 
-  setup(service: any) {
-    service
-      .getCharacteristic(this.api.hap.Characteristic.TargetHeaterCoolerState)
+  constructor(accessory: PlatformAccessory, apiClient: SinclairApi, log: Logger) {
+    this.accessory = accessory;
+    this.apiClient = apiClient;
+    this.log = log;
+
+    this.setupAccessory();
+  }
+
+  private setupAccessory() {
+    const service = this.accessory.getService(Service.HeaterCooler)
+      || this.accessory.addService(Service.HeaterCooler);
+
+    service.getCharacteristic(Service.Characteristic.Active)
+      .onSet(this.setActive.bind(this));
+
+    service.getCharacteristic(Service.Characteristic.CurrentHeaterCoolerState)
+      .onGet(this.getCurrentState.bind(this));
+
+    service.getCharacteristic(Service.Characteristic.TargetHeaterCoolerState)
       .onSet(this.setTargetState.bind(this));
 
-    service
-      .getCharacteristic(this.api.hap.Characteristic.RotationSpeed)
+    service.getCharacteristic(Service.Characteristic.RotationSpeed)
       .onSet(this.setFanSpeed.bind(this));
 
-    this.refreshCurrentState(service);
+    this.apiClient.on('connected', () => {
+      this.log('Connected to Sinclair AC');
+    });
+
+    this.apiClient.on('error', (err) => {
+      this.log('Sinclair API error:', err);
+    });
+  }
+
+  private async setActive(value: CharacteristicValue) {
+    this.apiClient.sendCommand({ cmd: 'set_power', value: value ? 1 : 0 });
   }
 
   private async setTargetState(value: CharacteristicValue) {
-    let mode: number;
-
-    switch (value) {
-      case this.api.hap.Characteristic.TargetHeaterCoolerState.COOL:
-        mode = 1;
-        break;
-      case this.api.hap.Characteristic.TargetHeaterCoolerState.HEAT:
-        mode = 4;
-        break;
-      case this.api.hap.Characteristic.TargetHeaterCoolerState.AUTO:
-      default:
-        mode = 0;
-    }
-
-    if (mode === 0 && this.config.enableDryMode) mode = 2;
-    if (mode === 0 && this.config.enableFanMode) mode = 3;
-
-    try {
-      await this.apiClient.setState({ mode, power: true });
-    } catch (err) {
-      this.log.error('Failed to set mode:', err);
-    }
+    const modeMap: { [key: number]: string } = {
+      0: 'auto',
+      1: 'cool',
+      2: 'heat',
+      3: 'dry',
+      4: 'fan'
+    };
+    const mode = modeMap[value as number] || 'auto';
+    this.apiClient.sendCommand({ cmd: 'set_mode', mode });
   }
 
   private async setFanSpeed(value: CharacteristicValue) {
-    const percent = value as number;
-    const fan = Math.round((percent / 100) * 5);
-
-    const state: SinclairState = { fan };
-    try {
-      await this.apiClient.setState(state);
-    } catch (err) {
-      this.log.error('Failed to set fan speed:', err);
-    }
+    this.apiClient.sendCommand({ cmd: 'set_fan', speed: value as number });
   }
 
-  private async refreshCurrentState(service: any) {
-    try {
-      const state = await this.apiClient.getStatus();
-
-      if (state.temp !== undefined) {
-        service.updateCharacteristic(
-          this.api.hap.Characteristic.CurrentTemperature,
-          state.temp
-        );
-      }
-
-      const currentState = this.mapModeToHap(state.mode ?? 0);
-      service.updateCharacteristic(
-        this.api.hap.Characteristic.CurrentHeaterCoolerState,
-        currentState
-      );
-    } catch (err) {
-      this.log.error('Failed to refresh state:', err);
-    }
-  }
-
-  private mapModeToHap(mode: number): number {
-    const Characteristic = this.api.hap.Characteristic;
-    switch (mode) {
-      case 1: return Characteristic.CurrentHeaterCoolerState.COOLING;
-      case 4: return Characteristic.CurrentHeaterCoolerState.HEATING;
-      case 2:
-      case 3: return Characteristic.CurrentHeaterCoolerState.IDLE;
-      default: return Characteristic.CurrentHeaterCoolerState.INACTIVE;
-    }
-  }
-}
+  private async getCurrentState(): Promise<CharacteristicValue> {

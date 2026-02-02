@@ -1,177 +1,111 @@
 import dgram from 'dgram';
-import crypto from 'crypto';
+import { EventEmitter } from 'events';
 
-export interface SinclairState {
-  power?: boolean;
-  mode?: number; // 0 auto, 1 cool, 2 dry, 3 fan, 4 heat
-  temp?: number; // 16–30
-  fan?: number;  // 0–5
+export interface SinclairDeviceInfo {
+  id: string;
+  key: string;
+  ip: string;
+  port: number;
 }
 
-interface PendingRequest {
-  resolve: (value: any) => void;
-  reject: (reason?: any) => void;
-  timeout: NodeJS.Timeout;
+export interface SinclairApiOptions {
+  host: string;
+  port?: number;
+  debug?: boolean;
+  retryInterval?: number;
 }
 
-export class SinclairApi {
-  private socket = dgram.createSocket('udp4');
+export class SinclairApi extends EventEmitter {
+  private socket: dgram.Socket;
+  private device?: SinclairDeviceInfo;
+  private host: string;
+  private port: number;
+  private debug: boolean;
+  private retryInterval: number;
+  private retryTimer?: NodeJS.Timeout;
 
-  private deviceId?: string;
-  private key = '0123456789abcdef';
+  constructor(options: SinclairApiOptions) {
+    super();
+    this.host = options.host;
+    this.port = options.port || 7000;
+    this.debug = options.debug || false;
+    this.retryInterval = (options.retryInterval || 5) * 1000;
 
-  private readonly port = 7000;
-  private readonly timeoutMs = 3000;
+    this.socket = dgram.createSocket('udp4');
+    this.socket.on('message', (msg, rinfo) => this.handleMessage(msg, rinfo));
+    this.socket.on('error', (err) => this.emit('error', err));
 
-  private pending?: PendingRequest;
-
-  constructor(
-    private readonly host: string,
-    private readonly log: (msg: string) => void,
-    private readonly debug = false,
-  ) {
-    this.socket.on('message', msg => this.onMessage(msg));
-    this.socket.on('error', err => {
-      this.log(`UDP error: ${err.message}`);
-    });
+    this.startDiscovery();
   }
 
-  /* ---------- Public API ---------- */
-
-  async init(): Promise<void> {
-    await this.handshake();
-    await this.bind();
+  private log(...args: any[]) {
+    if (this.debug) console.log('[SinclairAPI]', ...args);
   }
 
-  async getStatus(): Promise<SinclairState> {
-    const res = await this.send({
-      cmd: 'get',
-      cols: ['Pow', 'Mod', 'SetTem', 'WdSpd'],
-    });
+  private startDiscovery() {
+    this.log('Starting discovery loop...');
+    this.sendScan();
 
-    return {
-      power: res.Pow === 1,
-      mode: res.Mod,
-      temp: res.SetTem > 0 ? res.SetTem : undefined,
-      fan: res.WdSpd,
-    };
-  }
-
-  async setState(state: SinclairState): Promise<void> {
-    const data: any = {};
-
-    if (state.power !== undefined) data.Pow = state.power ? 1 : 0;
-    if (state.mode !== undefined) data.Mod = state.mode;
-    if (state.temp !== undefined) data.SetTem = state.temp;
-    if (state.fan !== undefined) data.WdSpd = state.fan;
-
-    await this.send({ cmd: 'set', data });
-  }
-
-  /* ---------- Protocol ---------- */
-
-  private async handshake(): Promise<void> {
-    this.debugLog('Handshake…');
-
-    const res = await this.send({ cmd: 'scan' });
-
-    if (!res?.mac) {
-      throw new Error('Handshake failed: no device ID');
-    }
-
-    this.deviceId = res.mac;
-    this.debugLog(`Device ID: ${this.deviceId}`);
-  }
-
-  private async bind(): Promise<void> {
-    if (!this.deviceId) {
-      throw new Error('Bind failed: no device ID');
-    }
-
-    this.debugLog('Binding device…');
-
-    const res = await this.send({
-      cmd: 'bind',
-      data: {
-        mac: this.deviceId,
-        key: this.key,
-      },
-    });
-
-    if (res?.key) {
-      this.key = res.key;
-      this.debugLog('Session key updated');
-    }
-  }
-
-  /* ---------- UDP transport ---------- */
-
-  private send(payload: any): Promise<any> {
-    if (this.pending) {
-      return Promise.reject(new Error('Another request is in flight'));
-    }
-
-    return new Promise((resolve, reject) => {
-      const encrypted = this.encrypt(payload);
-      const msg = Buffer.from(JSON.stringify(encrypted));
-
-      const timeout = setTimeout(() => {
-        this.pending = undefined;
-        reject(new Error('UDP timeout'));
-      }, this.timeoutMs);
-
-      this.pending = { resolve, reject, timeout };
-
-      if (this.debug) {
-        this.debugLog(`→ ${JSON.stringify(payload)}`);
+    this.retryTimer = setInterval(() => {
+      if (!this.device) {
+        this.log('Retrying scan...');
+        this.sendScan();
       }
+    }, this.retryInterval);
+  }
 
-      this.socket.send(msg, 0, msg.length, this.port, this.host);
+  private sendScan() {
+    const payload = JSON.stringify({ cmd: 'scan' });
+    this.socket.send(payload, this.port, this.host, (err) => {
+      if (err) this.emit('error', err);
+      else this.log('Scan sent to', this.host);
     });
   }
 
-  private onMessage(msg: Buffer) {
-    if (!this.pending) {
+  private handleMessage(msg: Buffer, rinfo: dgram.RemoteInfo) {
+    this.log('Received UDP message:', msg.toString());
+    try {
+      const data = JSON.parse(msg.toString());
+      if (data.cmd === 'report' && data.data?.id) {
+        this.device = {
+          id: data.data.id,
+          key: data.data.key,
+          ip: rinfo.address,
+          port: rinfo.port
+        };
+        this.log('Device discovered:', this.device.id);
+        this.emit('connected', this.device);
+        if (this.retryTimer) clearInterval(this.retryTimer);
+        this.sendBind();
+      }
+    } catch (err) {
+      this.log('Failed to parse message:', err);
+    }
+  }
+
+  private sendBind() {
+    if (!this.device) return;
+    const payload = JSON.stringify({ cmd: 'bind', id: this.device.id });
+    this.socket.send(payload, this.port, this.host, (err) => {
+      if (err) this.emit('error', err);
+      else this.log('Bind sent to device', this.device?.id);
+    });
+  }
+
+  public sendCommand(command: object) {
+    if (!this.device) {
+      this.log('Cannot send command, device not connected yet');
       return;
     }
-
-    clearTimeout(this.pending.timeout);
-
-    try {
-      const raw = JSON.parse(msg.toString());
-      const data = this.decrypt(raw);
-
-      if (this.debug) {
-        this.debugLog(`← ${JSON.stringify(data)}`);
-      }
-
-      this.pending.resolve(data);
-    } catch (err) {
-      this.pending.reject(err);
-    } finally {
-      this.pending = undefined;
-    }
+    const payload = JSON.stringify(command);
+    this.socket.send(payload, this.port, this.host, (err) => {
+      if (err) this.emit('error', err);
+      else this.log('Command sent:', command);
+    });
   }
 
-  /* ---------- Crypto ---------- */
-
-  private encrypt(data: any): any {
-    const cipher = crypto.createCipheriv('aes-128-ecb', this.key, null);
-    let enc = cipher.update(JSON.stringify(data), 'utf8', 'base64');
-    enc += cipher.final('base64');
-    return { enc };
-  }
-
-  private decrypt(data: any): any {
-    const decipher = crypto.createDecipheriv('aes-128-ecb', this.key, null);
-    let dec = decipher.update(data.enc, 'base64', 'utf8');
-    dec += decipher.final('utf8');
-    return JSON.parse(dec);
-  }
-
-  private debugLog(msg: string) {
-    if (this.debug) {
-      this.log(`[DEBUG] ${msg}`);
-    }
+  public close() {
+    if (this.retryTimer) clearInterval(this.retryTimer);
+    this.socket.close();
   }
 }
