@@ -23,12 +23,6 @@ using the local **Gree / EWPE (UDP 7000)** protocol.
 npm install -g homebridge-sinclair-airconditioner
 ```
 
-## Installation
-
-```bash
-npm install -g homebridge-sinclair-airconditioner
-```
-
 Restart Homebridge after installation.
 
 ---
