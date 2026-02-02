@@ -89,4 +89,7 @@ export class SinclairAccessory {
       case 4: return Characteristic.CurrentHeaterCoolerState.HEATING;
       case 2:
       case 3: return Characteristic.CurrentHeaterCoolerState.IDLE;
-      default: return Characteristic.CurrentH
+      default: return Characteristic.CurrentHeaterCoolerState.INACTIVE;
+    }
+  }
+}
