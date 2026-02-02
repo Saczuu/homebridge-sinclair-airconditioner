@@ -7,31 +7,26 @@
     "properties": {
       "name": {
         "title": "Accessory Name",
-        "description": "Name shown in HomeKit",
         "type": "string",
-        "default": "Air Conditioner"
+        "default": "Sinclair AC"
       },
       "host": {
         "title": "Air Conditioner IP Address",
-        "description": "Local IPv4 address of the Sinclair air conditioner",
         "type": "string",
         "format": "ipv4"
       },
       "enableDryMode": {
-        "title": "Enable DRY Mode",
-        "description": "Expose dehumidifier (DRY) mode in HomeKit",
+        "title": "Enable DRY Mode (Dehumidification)",
         "type": "boolean",
         "default": true
       },
       "enableFanMode": {
-        "title": "Enable FAN Mode",
-        "description": "Expose fan-only mode in HomeKit",
+        "title": "Enable FAN Mode (Fan Only)",
         "type": "boolean",
         "default": true
       },
       "pollingInterval": {
         "title": "Polling Interval (seconds)",
-        "description": "How often the device state is refreshed",
         "type": "number",
         "default": 10,
         "minimum": 5,
@@ -39,7 +34,6 @@
       },
       "debug": {
         "title": "Enable Debug Logging",
-        "description": "Log raw protocol messages to Homebridge console",
         "type": "boolean",
         "default": false
       }

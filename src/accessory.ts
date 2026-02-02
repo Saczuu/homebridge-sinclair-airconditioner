@@ -3,65 +3,81 @@ import { SinclairApi } from './sinclairApi';
 
 export class SinclairAccessory {
   private service: any;
+  private Characteristic: any;
 
   constructor(
     private accessory: PlatformAccessory,
     private apiClient: SinclairApi,
     private log: Logger,
-    private api?: API // optional for v1 fallback
+    private api?: API // optional for v2 support
   ) {
-    // Support v1/v2 Service and Characteristic
+    // Dual v1/v2 Service and Characteristic
     const ServiceValue = this.api?.hap?.Service || require('homebridge').Service;
-    const CharacteristicValue = this.api?.hap?.Characteristic || require('homebridge').Characteristic;
+    this.Characteristic = this.api?.hap?.Characteristic || require('homebridge').Characteristic;
 
+    // Add or get HeaterCooler service
     this.service =
       this.accessory.getService(ServiceValue.HeaterCooler) ||
       this.accessory.addService(ServiceValue.HeaterCooler);
 
-    this.service.getCharacteristic(CharacteristicValue.Active)
+    // Bind characteristics
+    this.service.getCharacteristic(this.Characteristic.Active)
       .onSet(this.setActive.bind(this));
 
-    this.service.getCharacteristic(CharacteristicValue.CurrentHeaterCoolerState)
+    this.service.getCharacteristic(this.Characteristic.CurrentHeaterCoolerState)
       .onGet(this.getCurrentState.bind(this));
 
-    this.service.getCharacteristic(CharacteristicValue.TargetHeaterCoolerState)
+    this.service.getCharacteristic(this.Characteristic.TargetHeaterCoolerState)
       .onSet(this.setTargetState.bind(this));
 
-    this.service.getCharacteristic(CharacteristicValue.RotationSpeed)
+    this.service.getCharacteristic(this.Characteristic.RotationSpeed)
       .onSet(this.setFanSpeed.bind(this));
 
+    // Create a dual-typed log for v1/v2
+    const logAny = this.log as unknown as
+      | ((msg: string, ...args: any[]) => void)
+      | { info?: (msg: string, ...args: any[]) => void; error?: (msg: string, ...args: any[]) => void };
+
+    // Event listeners
     this.apiClient.on('connected', () => {
-      if (typeof this.log === 'function') this.log('Connected to Sinclair AC');
-      else this.log?.info('Connected to Sinclair AC');
+      if (typeof logAny === 'function') {
+        logAny('Connected to Sinclair AC');
+      } else {
+        logAny?.info?.('Connected to Sinclair AC');
+      }
     });
 
     this.apiClient.on('error', (err) => {
-      if (typeof this.log === 'function') this.log('Sinclair API error:', err);
-      else this.log?.error('Sinclair API error:', err);
+      if (typeof logAny === 'function') {
+        logAny('Sinclair API error:', err);
+      } else {
+        logAny?.error?.('Sinclair API error:', err);
+      }
     });
   }
 
   private async setActive(value: CharacteristicValue) {
-    this.apiClient.sendCommand({ cmd: 'set_power', value: value ? 1 : 0 });
+    await this.apiClient.sendCommand({ cmd: 'set_power', value: value ? 1 : 0 });
   }
 
   private async setTargetState(value: CharacteristicValue) {
     const modeMap: { [key: number]: string } = {
-      0: 'auto',
-      1: 'cool',
-      2: 'heat',
-      3: 'dry',
-      4: 'fan'
+      0: 'auto', // AUTO
+      1: 'cool', // COOL
+      2: 'heat', // HEAT
+      3: 'dry',  // DRY
+      4: 'fan'   // FAN
     };
     const mode = modeMap[value as number] || 'auto';
-    this.apiClient.sendCommand({ cmd: 'set_mode', mode });
+    await this.apiClient.sendCommand({ cmd: 'set_mode', mode });
   }
 
   private async setFanSpeed(value: CharacteristicValue) {
-    this.apiClient.sendCommand({ cmd: 'set_fan', speed: value as number });
+    await this.apiClient.sendCommand({ cmd: 'set_fan', speed: value as number });
   }
 
   private async getCurrentState(): Promise<CharacteristicValue> {
-    return 0; // default AUTO
+    // Could map real API state here; default to AUTO
+    return 0;
   }
 }
