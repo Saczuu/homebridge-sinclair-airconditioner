@@ -1,20 +1,27 @@
-import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
-import { SinclairApi } from './sinclairApi';
+import {
+  API,
+  PlatformAccessory,
+  CharacteristicValue,
+} from 'homebridge';
+import { SinclairApi, SinclairState } from './sinclairApi';
 
 export class SinclairAccessory {
   constructor(
     private readonly accessory: PlatformAccessory,
-    private readonly api: SinclairApi,
+    private readonly apiClient: SinclairApi,
     private readonly config: any,
+    private readonly api: API
   ) {}
 
-  setup(service: Service) {
+  setup(service: any) {
+    // Target heater/cooler state
     service
-      .getCharacteristic(this.accessory.platform.Characteristic.TargetHeaterCoolerState)
+      .getCharacteristic(this.api.hap.Characteristic.TargetHeaterCoolerState)
       .onSet(this.setTargetState.bind(this));
 
+    // Fan speed
     service
-      .getCharacteristic(this.accessory.platform.Characteristic.RotationSpeed)
+      .getCharacteristic(this.api.hap.Characteristic.RotationSpeed)
       .onSet(this.setFanSpeed.bind(this));
   }
 
@@ -22,34 +29,29 @@ export class SinclairAccessory {
     let mode: number;
 
     switch (value) {
-      case this.accessory.platform.Characteristic.TargetHeaterCoolerState.COOL:
+      case this.api.hap.Characteristic.TargetHeaterCoolerState.COOL:
         mode = 1;
         break;
-      case this.accessory.platform.Characteristic.TargetHeaterCoolerState.HEAT:
+      case this.api.hap.Characteristic.TargetHeaterCoolerState.HEAT:
         mode = 4;
         break;
-      case this.accessory.platform.Characteristic.TargetHeaterCoolerState.AUTO:
+      case this.api.hap.Characteristic.TargetHeaterCoolerState.AUTO:
       default:
         mode = 0;
     }
 
-    // Jeśli AUTO i DRY włączony → użyj DRY
-    if (mode === 0 && this.config.enableDryMode) {
-      mode = 2;
-    }
+    // Apply optional DRY / FAN modes
+    if (mode === 0 && this.config.enableDryMode) mode = 2;
+    if (mode === 0 && this.config.enableFanMode) mode = 3;
 
-    // Jeśli AUTO i FAN włączony → FAN
-    if (mode === 0 && this.config.enableFanMode) {
-      mode = 3;
-    }
-
-    await this.api.setState({ mode, power: true });
+    await this.apiClient.setState({ mode, power: true });
   }
 
   private async setFanSpeed(value: CharacteristicValue) {
     const percent = value as number;
     const fan = Math.round((percent / 100) * 5);
 
-    await this.api.setState({ fan });
+    const state: SinclairState = { fan };
+    await this.apiClient.setState(state);
   }
 }
