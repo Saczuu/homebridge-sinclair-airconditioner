@@ -1,4 +1,10 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
+import {
+  API,
+  DynamicPlatformPlugin,
+  Logger,
+  PlatformAccessory,
+  PlatformConfig
+} from 'homebridge';
 import { SinclairAccessory } from './accessory';
 import { SinclairApi } from './sinclairApi';
 
@@ -15,15 +21,20 @@ export class SinclairAirconditionerPlatform implements DynamicPlatformPlugin {
     });
   }
 
+  configureAccessory(accessory: PlatformAccessory) {
+    this.accessories.push(accessory);
+  }
+
   private discoverDevices() {
     if (!this.config.host) {
       this.log.error('SinclairAirconditioner: No host configured');
       return;
     }
 
+    const uuid = this.api.hap.uuid.generate(this.config.host);
     const accessory = new this.api.platformAccessory(
       this.config.name || 'Sinclair AC',
-      this.api.hap.uuid.generate(this.config.host)
+      uuid
     );
 
     const apiClient = new SinclairApi({
@@ -38,9 +49,5 @@ export class SinclairAirconditionerPlatform implements DynamicPlatformPlugin {
       'SinclairAirconditioner',
       [accessory]
     );
-  }
-
-  configureAccessory(accessory: PlatformAccessory) {
-    this.accessories.push(accessory);
   }
 }

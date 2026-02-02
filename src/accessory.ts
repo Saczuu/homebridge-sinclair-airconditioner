@@ -1,45 +1,43 @@
-import { PlatformAccessory, CharacteristicValue, Logger, Service as HBService, API } from 'homebridge';
+import { PlatformAccessory, CharacteristicValue, Logger, API } from 'homebridge';
 import { SinclairApi } from './sinclairApi';
 
 export class SinclairAccessory {
-  private readonly accessory: PlatformAccessory;
-  private readonly apiClient: SinclairApi;
-  private readonly log: Logger;
-  private service: HBService;
+  private service: any;
 
-  constructor(accessory: PlatformAccessory, apiClient: SinclairApi, log: Logger, api: API) {
-    this.accessory = accessory;
-    this.apiClient = apiClient;
-    this.log = log;
+  constructor(
+    private accessory: PlatformAccessory,
+    private apiClient: SinclairApi,
+    private log: Logger,
+    private api?: API // optional for v1 fallback
+  ) {
+    // Support v1/v2 Service and Characteristic
+    const ServiceValue = this.api?.hap?.Service || require('homebridge').Service;
+    const CharacteristicValue = this.api?.hap?.Characteristic || require('homebridge').Characteristic;
 
-    // Get Service from api.hap
-    this.service = this.accessory.getService(api.hap.Service.HeaterCooler)
-      || this.accessory.addService(api.hap.Service.HeaterCooler);
+    this.service =
+      this.accessory.getService(ServiceValue.HeaterCooler) ||
+      this.accessory.addService(ServiceValue.HeaterCooler);
 
-    this.setupAccessory(api);
-  }
-
-  private setupAccessory(api: API) {
-    const Characteristic = api.hap.Characteristic;
-
-    this.service.getCharacteristic(Characteristic.Active)
+    this.service.getCharacteristic(CharacteristicValue.Active)
       .onSet(this.setActive.bind(this));
 
-    this.service.getCharacteristic(Characteristic.CurrentHeaterCoolerState)
+    this.service.getCharacteristic(CharacteristicValue.CurrentHeaterCoolerState)
       .onGet(this.getCurrentState.bind(this));
 
-    this.service.getCharacteristic(Characteristic.TargetHeaterCoolerState)
+    this.service.getCharacteristic(CharacteristicValue.TargetHeaterCoolerState)
       .onSet(this.setTargetState.bind(this));
 
-    this.service.getCharacteristic(Characteristic.RotationSpeed)
+    this.service.getCharacteristic(CharacteristicValue.RotationSpeed)
       .onSet(this.setFanSpeed.bind(this));
 
     this.apiClient.on('connected', () => {
-      this.log.info('Connected to Sinclair AC');
+      if (typeof this.log === 'function') this.log('Connected to Sinclair AC');
+      else this.log?.info('Connected to Sinclair AC');
     });
 
     this.apiClient.on('error', (err) => {
-      this.log.error('Sinclair API error:', err);
+      if (typeof this.log === 'function') this.log('Sinclair API error:', err);
+      else this.log?.error('Sinclair API error:', err);
     });
   }
 
@@ -64,6 +62,6 @@ export class SinclairAccessory {
   }
 
   private async getCurrentState(): Promise<CharacteristicValue> {
-    return 0; // AUTO default
+    return 0; // default AUTO
   }
 }

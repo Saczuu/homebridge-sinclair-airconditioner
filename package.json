@@ -1,28 +1,24 @@
 {
   "name": "homebridge-sinclair-airconditioner",
   "version": "0.2.0",
-  "description": "Homebridge plugin for Sinclair Air Conditioners using local Gree/EWPE UDP protocol",
-  "main": "dist/platform.js",
-  "types": "dist/platform.d.ts",
+  "description": "Homebridge plugin for Sinclair air conditioners (Gree/EWPE UDP 7000)",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build"
   },
-  "keywords": ["homebridge-plugin", "sinclair", "ac", "airconditioner", "homekit"],
+  "keywords": ["homebridge-plugin", "homebridge", "sinclair", "airconditioner"],
   "engines": {
-    "node": ">=18.0.0",
-    "homebridge": ">=1.11.1"
+    "node": ">=16.0.0",
+    "homebridge": ">=1.11.1 <3"
   },
   "dependencies": {
-    "dgram": "^1.0.1",
-    "events": "^3.3.0"
+    "homebridge": "^1.11.1"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.2.0"
+    "typescript": "^5.1.0",
+    "@types/node": "^20.4.2"
   },
-  "homebridge": {
-    "pluginAlias": "SinclairAirconditioner",
-    "pluginType": "platform"
-  }
+  "author": "Maciej Saczewski",
+  "license": "MIT"
 }
