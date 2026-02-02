@@ -1,4 +1,4 @@
-import { API, PlatformAccessory, CharacteristicValue } from 'homebridge';
+import { API, PlatformAccessory, CharacteristicValue, Logger } from 'homebridge';
 import { SinclairApi, SinclairState } from './sinclairApi';
 
 export class SinclairAccessory {
@@ -6,21 +6,19 @@ export class SinclairAccessory {
     private readonly accessory: PlatformAccessory,
     private readonly apiClient: SinclairApi,
     private readonly config: any,
-    private readonly api: API
+    private readonly api: API,
+    private readonly log: Logger
   ) {}
 
   setup(service: any) {
-    // Target HeaterCooler State
     service
       .getCharacteristic(this.api.hap.Characteristic.TargetHeaterCoolerState)
       .onSet(this.setTargetState.bind(this));
 
-    // Fan speed
     service
       .getCharacteristic(this.api.hap.Characteristic.RotationSpeed)
       .onSet(this.setFanSpeed.bind(this));
 
-    // Initial values
     this.refreshCurrentState(service);
   }
 
@@ -45,7 +43,7 @@ export class SinclairAccessory {
     try {
       await this.apiClient.setState({ mode, power: true });
     } catch (err) {
-      this.accessory.log?.('Failed to set mode:', err);
+      this.log.error('Failed to set mode:', err);
     }
   }
 
@@ -57,7 +55,7 @@ export class SinclairAccessory {
     try {
       await this.apiClient.setState(state);
     } catch (err) {
-      this.accessory.log?.('Failed to set fan speed:', err);
+      this.log.error('Failed to set fan speed:', err);
     }
   }
 
@@ -72,13 +70,13 @@ export class SinclairAccessory {
         );
       }
 
-      const currentState = this.mapModeToHap(state.mode);
+      const currentState = this.mapModeToHap(state.mode ?? 0);
       service.updateCharacteristic(
         this.api.hap.Characteristic.CurrentHeaterCoolerState,
         currentState
       );
     } catch (err) {
-      this.accessory.log?.('Failed to refresh state:', err);
+      this.log.error('Failed to refresh state:', err);
     }
   }
 

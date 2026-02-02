@@ -94,7 +94,7 @@ export class SinclairPlatform implements DynamicPlatformPlugin {
           );
         }
 
-        const currentState = this.mapModeToHap(state.mode);
+        const currentState = this.mapModeToHap(state.mode ?? 0);
         service.updateCharacteristic(
           this.api.hap.Characteristic.CurrentHeaterCoolerState,
           currentState
