@@ -66,7 +66,7 @@ export class SinclairPlatform implements DynamicPlatformPlugin {
     }
 
     // Setup accessory logic
-    const sinclair = new SinclairAccessory(accessory, apiClient, this.config, this.api);
+      const sinclair = new SinclairAccessory(accessory, apiClient, this.config, this.api, this.log);
     sinclair.setup(service);
 
     // Start polling
