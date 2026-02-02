@@ -54,7 +54,7 @@ Configuration is done via the **Homebridge UI** (no manual JSON editing required
 
 ---
 
-## 🙏 Credits
+## Credits
 
 Inspired by:
 
