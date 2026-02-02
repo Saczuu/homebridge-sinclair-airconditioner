@@ -11,7 +11,7 @@
   "keywords": ["homebridge-plugin", "sinclair", "ac", "airconditioner", "homekit"],
   "engines": {
     "node": ">=18.0.0",
-    "homebridge": ">=2.0.0"
+    "homebridge": ">=1.11.1"
   },
   "dependencies": {
     "dgram": "^1.0.1",
