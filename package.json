@@ -1,0 +1,31 @@
+{
+  "name": "homebridge-sinclair-airconditioner",
+  "version": "0.1.0",
+  "description": "Homebridge plugin for Sinclair air conditioners (Gree / EWPE protocol)",
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "sinclair",
+    "airconditioner",
+    "gree",
+    "ewpe"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "homebridge": ">=1.6.0"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "prepare": "npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "homebridge": "^1.8.0",
+    "typescript": "^5.3.3"
+  }
+}
+

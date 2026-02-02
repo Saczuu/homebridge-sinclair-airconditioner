@@ -1,0 +1,1 @@
+// defaulty, walidacja
