@@ -60,3 +60,7 @@ export class SinclairAccessory {
   }
 
   private async getCurrentState(): Promise<CharacteristicValue> {
+    // This could be enhanced to read last known state
+    return 0; // AUTO default
+  }
+}
