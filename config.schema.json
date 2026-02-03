@@ -1,38 +1,65 @@
 {
   "pluginAlias": "SinclairAirConditioner",
-  "pluginType": "platform",
+  "pluginType": "accessory",
   "singular": false,
   "schema": {
     "type": "object",
+    "required": [
+      "accessory",
+      "host",
+      "name",
+      "acModel",
+      "updateInterval"
+    ],
     "properties": {
-      "name": {
-        "title": "Platform Name",
+      "accessory": {
         "type": "string",
-        "default": "Sinclair Air Conditioner",
-        "required": true
-      },
-      "devices": {
-        "title": "Devices",
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "title": "Device Name",
-              "type": "string",
-              "required": true,
-              "placeholder": "Bedroom AC"
-            },
-            "ip": {
-              "title": "IP Address",
-              "type": "string",
-              "required": true,
-              "format": "ipv4",
-              "placeholder": "192.168.1.100"
-            }
-          }
+        "default": "GreeHeaterCooler",
+        "enum": ["GreeHeaterCooler"],
+        "description": "Internal accessory type (hidden from UI)",
+        "ui": {
+          "hidden": true
         }
+      },
+      "host": {
+        "title": "IP Address",
+        "type": "string",
+        "format": "ipv4",
+        "placeholder": "192.168.1.100",
+        "description": "IP address of the air conditioner"
+      },
+      "name": {
+        "title": "HomeKit Name",
+        "type": "string",
+        "placeholder": "Living Room AC",
+        "description": "Name shown in Apple Home"
+      },
+      "acModel": {
+        "title": "Model",
+        "type": "string",
+        "placeholder": "Gree V2",
+        "description": "Air conditioner model identifier"
+      },
+      "useTargetTempAsCurrent": {
+        "title": "Use Target Temperature as Current",
+        "type": "boolean",
+        "default": false,
+        "description": "Use target temperature instead of reported current temperature"
+      },
+      "acTempSensorShift": {
+        "title": "Temperature Sensor Shift",
+        "type": "integer",
+        "default": 0,
+        "description": "Temperature offset applied to sensor readings (°C)"
+      },
+      "updateInterval": {
+        "title": "Update Interval (milliseconds)",
+        "type": "integer",
+        "minimum": 1000,
+        "default": 10000,
+        "description": "Polling interval for updating device state"
       }
     }
   }
 }
+
