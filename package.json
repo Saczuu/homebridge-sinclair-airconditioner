@@ -1,10 +1,26 @@
 {
-  "name": "homebridge-sinclair-air-conditioner",
-  "version": "0.0.1",
-  "main": "index.js",
-  "keywords": ["homebridge-plugin"],
-  "engines": {
-    "node": ">=18.0.0",
-    "homebridge": ">=1.6.0"
-  }
+    "name": "homebridge-sinclair-airconditioner",
+    "version": "0.2.0",
+    "description": "Homebridge plugin for Sinclair Air Conditioner",
+    "license": "MIT",
+    "keywords": [
+        "homebridge-plugin",
+        "homebridge",
+        "sinclair",
+        "airconditioner",
+        "ac"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Saczuu/homebridge-sinclair-airconditioner.git"
+    },
+    "engines": {
+        "node": ">=0.12.0",
+        "homebridge": ">=0.2.0"
+    },
+    "dependencies": {
+        "npm": "^6.1.0"
+    },
+    "homepage": "https://github.com/Saczuu/homebridge-sinclair-airconditioner#readme",
+    "main": "index.js"
 }

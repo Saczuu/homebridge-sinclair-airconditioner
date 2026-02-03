@@ -7,7 +7,7 @@
     },
     "accessories": [
         {
-            "accessory": "GreeHeaterCooler",
+            "accessory": "SinclairAirConditioner",
             "host": "192.168.1.X",
             "name": "Living room AC",
             "acModel": "Gree V2",
@@ -15,7 +15,7 @@
             "updateInterval": 10000
         },
         {
-            "accessory": "GreeHeaterCooler",
+            "accessory": "SinclairAirConditioner",
             "host": "192.168.1.Y",
             "name": "Bedroom AC",
             "acModel": "C&H",

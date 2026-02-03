@@ -8,18 +8,14 @@
       "accessory",
       "host",
       "name",
-      "acModel",
       "updateInterval"
     ],
     "properties": {
       "accessory": {
         "type": "string",
-        "default": "GreeHeaterCooler",
-        "enum": ["GreeHeaterCooler"],
-        "description": "Internal accessory type (hidden from UI)",
-        "ui": {
-          "hidden": true
-        }
+        "default": "SinclairAirConditioner",
+        "description": "Internal accessory type",
+        "pattern": "^SinclairAirConditioner$"
       },
       "host": {
         "title": "IP Address",

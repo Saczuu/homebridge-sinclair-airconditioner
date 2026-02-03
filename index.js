@@ -6,10 +6,10 @@ module.exports = function (homebridge) {
     console.log(homebridge.platformAccessory);
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
-    homebridge.registerAccessory('homebridge-gree-heatercooler', 'GreeHeaterCooler', GreeHeaterCooler);
+    homebridge.registerAccessory('homebridge-sinclair-airconditioner', 'SinclairAirConditioner', SinclairAirConditioner);
 }
 
-function GreeHeaterCooler(log, config) {
+function SinclairAirConditioner(log, config) {
     this.log = log;
     this.name = config.name;
     this.host = config.host;
@@ -101,7 +101,7 @@ function GreeHeaterCooler(log, config) {
     this.discover();
 }
 
-GreeHeaterCooler.prototype = {
+SinclairAirConditioner.prototype = {
 
     getServices: function () {
         return this.services;
