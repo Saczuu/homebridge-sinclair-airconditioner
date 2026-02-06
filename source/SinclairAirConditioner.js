@@ -1,17 +1,16 @@
 //
 //  SinclairAirConditioner.js
 //
-//
 //  Created by Maciej Sączewski on 06/02/2026.
 //
 
 'use strict';
 
 module.exports = function (Service, Characteristic) {
-    
+
     const commands = require('./commandEnums');
     const deviceFactory = require('./deviceFactory');
-    
+
     function SinclairAirConditioner(log, config) {
         this.log = log;
         this.name = config.name;
@@ -20,89 +19,76 @@ module.exports = function (Service, Characteristic) {
         this.acTempSensorShift = config.acTempSensorShift || 40;
         this.useTargetTempAsCurrent = config.useTargetTempAsCurrent || false;
         this.model = config.acModel || "Gree HeaterCooler";
-        
+
         this.services = [];
-        
+
+        // --- Initialize main HeaterCooler service ---
         this.GreeACService = new Service.HeaterCooler(this.name);
-        
+
+        // --- Active characteristic ---
         this.GreeACService
-        .getCharacteristic(Characteristic.Active)
-        .on('get', this.getActive.bind(this))
-        .on('set', this.setActive.bind(this));
-        
+            .getCharacteristic(Characteristic.Active)
+            .on('get', this.getActive.bind(this))
+            .on('set', this.setActive.bind(this));
+
+        // --- Current HeaterCooler state ---
         this.GreeACService
-        .getCharacteristic(Characteristic.CurrentHeaterCoolerState)
-        .on('get', this.getCurrentHeaterCoolerState.bind(this));
-        
+            .getCharacteristic(Characteristic.CurrentHeaterCoolerState)
+            .on('get', this.getCurrentHeaterCoolerState.bind(this));
+
+        // --- Target HeaterCooler state ---
         this.GreeACService
-        .getCharacteristic(Characteristic.TargetHeaterCoolerState)
-        .on('set', this.setTargetHeaterCoolerState.bind(this))
-        .on('get', this.getTargetHeaterCoolerState.bind(this));
-        
+            .getCharacteristic(Characteristic.TargetHeaterCoolerState)
+            .on('get', this.getTargetHeaterCoolerState.bind(this))
+            .on('set', this.setTargetHeaterCoolerState.bind(this));
+
+        // --- Current temperature ---
         this.GreeACService
-        .getCharacteristic(Characteristic.CurrentTemperature)
-        .setProps({
-            minValue: -100,
-            maxValue: 100,
-            minStep: 0.01
-        })
-        .on('get', this.getCurrentTemperature.bind(this));
-        
+            .getCharacteristic(Characteristic.CurrentTemperature)
+            .setProps({ minValue: -100, maxValue: 100, minStep: 0.01 })
+            .on('get', this.getCurrentTemperature.bind(this));
+
+        // --- Temperature units ---
         this.GreeACService
-        .getCharacteristic(Characteristic.TemperatureDisplayUnits)
-        .on('get', this.getTemperatureDisplayUnits.bind(this))
-        .on('set', this.setTemperatureDisplayUnits.bind(this));
-        
-        this.GreeACService.getCharacteristic(Characteristic.CoolingThresholdTemperature)
-        .setProps({
-            minValue: 18,
-            maxValue: 30,
-            minStep: 1
-        })
-        .on('set', this.setTargetTemperature.bind(this))
-        .on('get', this.getTargetTemperature.bind(this));
-        
-        this.GreeACService.getCharacteristic(Characteristic.HeatingThresholdTemperature)
-        .setProps({
-            minValue: 18,
-            maxValue: 30,
-            minStep: 1
-        })
-        .on('set', this.setTargetTemperature.bind(this))
-        .on('get', this.getTargetTemperature.bind(this));
-        
+            .getCharacteristic(Characteristic.TemperatureDisplayUnits)
+            .on('get', this.getTemperatureDisplayUnits.bind(this))
+            .on('set', this.setTemperatureDisplayUnits.bind(this));
+
+        // --- Cooling/Heating Threshold Temperature ---
+        [Characteristic.CoolingThresholdTemperature, Characteristic.HeatingThresholdTemperature].forEach(char => {
+            this.GreeACService
+                .getCharacteristic(char)
+                .setProps({ minValue: 18, maxValue: 30, minStep: 1 })
+                .on('get', this.getTargetTemperature.bind(this))
+                .on('set', this.setTargetTemperature.bind(this));
+        });
+
+        // --- Swing Mode ---
         this.GreeACService
-        .getCharacteristic(Characteristic.SwingMode)
-        .on('get', this.getSwingMode.bind(this))
-        .on('set', this.setSwingMode.bind(this));
-        
+            .getCharacteristic(Characteristic.SwingMode)
+            .on('get', this.getSwingMode.bind(this))
+            .on('set', this.setSwingMode.bind(this));
+
+        // --- Fan Speed / RotationSpeed ---
         this.GreeACService
-        .getCharacteristic(Characteristic.RotationSpeed)
-        .setProps({
-            unit: null,
-            format: Characteristic.Formats.UINT8,
-            maxValue: 6,
-            minValue: 1,
-            validValues: [1, 2, 3, 4, 5, 6] // 6 - auto
-        })
-        .on('get', this.getRotationSpeed.bind(this))
-        .on('set', this.setRotationSpeed.bind(this));
-        
-        
+            .getCharacteristic(Characteristic.RotationSpeed)
+            .setProps({
+                unit: null,
+                format: Characteristic.Formats.UINT8,
+                maxValue: 6,
+                minValue: 1,
+                validValues: [1, 2, 3, 4, 5, 6] // 6 = Auto
+            })
+            .on('get', this.getRotationSpeed.bind(this))
+            .on('set', this.setRotationSpeed.bind(this));
+
+        // --- Add main service ---
         this.services.push(this.GreeACService);
         
-        this.serviceInfo = new Service.AccessoryInformation();
-        
-        this.serviceInfo
-        .setCharacteristic(Characteristic.Name, this.name)
-        .setCharacteristic(Characteristic.Manufacturer, 'Gree')
-        .setCharacteristic(Characteristic.Model, this.model)
-        .setCharacteristic(Characteristic.SerialNumber, this.host.replace(/\./g, ""));
-        
-        this.services.push(this.serviceInfo);
-        
+        // --- Start device discovery ---
         this.discover();
     }
+
     
     SinclairAirConditioner.prototype = {
         

@@ -5,18 +5,13 @@
 //  Created by Maciej Sączewski on 06/02/2026.
 //
 
-const SinclairAirConditionerFactory = require('./source/SinclairAirConditioner');
+'use strict';
 
-module.exports = function (homebridge) {
-  const Service = homebridge.hap.Service;
-  const Characteristic = homebridge.hap.Characteristic;
+module.exports = (homebridge) => {
+  // Import the platform class
+  const SinclairPlatform = require('./platform');
 
-  const SinclairAirConditioner =
-    SinclairAirConditionerFactory(Service, Characteristic);
-
-  homebridge.registerAccessory(
-    'homebridge-sinclair-airconditioner',
-    'SinclairAirConditioner',
-    SinclairAirConditioner
-  );
+  // The platform module itself handles registration
+  // No need to call registerAccessory here
+  SinclairPlatform(homebridge);
 };
