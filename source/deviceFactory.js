@@ -25,13 +25,13 @@ class Device {
             onUpdate: options.onUpdate || function () {
             },
             onConnected: options.onConnected || function () {
-                console.log("[GreeAC]: connected to host %s", options.host);
+                console.log("[Sinclair AC]: connected to host %s", options.host);
             },
             onError: options.onError || function () {
-                console.log("[GreeAC]: error occurred %s", options.host, arguments);
+                console.log("[Sinclair AC]: error occurred %s", options.host, arguments);
             },
             onDisconnected: options.onDisconnected || function () {
-                console.log("[GreeAC]: disconnected from host %s", options.host, arguments);
+                console.log("[Sinclair AC]: disconnected from host %s", options.host, arguments);
             },
             updateInterval: options.updateInterval || 10000,
             port: 8000 + parseInt(options.host.split('.')[3]),
@@ -49,7 +49,7 @@ class Device {
          */
         var that = this;
 
-        console.log("[GreeAC]: init deviceFactory on host %s [server port %s]", that.options.host, that.options.port);
+        console.log("[Sinclair AC]: init deviceFactory on host %s [server port %s]", that.options.host, that.options.port);
 
         that.device = {};
         that.device.props = {};
@@ -70,15 +70,15 @@ class Device {
             this.socket.bind(port, "0.0.0.0", () => {
                 const message = new Buffer(JSON.stringify({t: 'scan'}));
                 this.socket.setBroadcast(false);
-                console.log("[GreeAC]: connecting to %s [using source port %d]", address, port);
+                console.log("[Sinclair AC]: connecting to %s [using source port %d]", address, port);
                 this.socket.send(message, 0, message.length, that.options.defaultPort, address, error => {
                     if (error) {
-                        console.log("[GreeAC]: _connectToDevice socket error %s", address, error);
+                        console.log("[Sinclair AC]: _connectToDevice socket error %s", address, error);
                     }
                 });
             });
         } catch (err) {
-            console.log("[GreeAC]: _connectToDevice error - port %d %s", port, err);
+            console.log("[Sinclair AC]: _connectToDevice error - port %d %s", port, err);
             const timeout = 5
             that.options.onDisconnected(that.device);
             setTimeout(() => {
@@ -102,7 +102,7 @@ class Device {
         that.device.port = port || that.options.defaultPort;
         that.device.bound = false;
         that.device.props = {};
-        console.log('[GreeAC] New device added', that.device);
+        console.log('[Sinclair AC] New device added', that.device);
     }
 
     /**
@@ -127,7 +127,7 @@ class Device {
         const toSend = new Buffer(JSON.stringify(request));
         this.socket.send(toSend, 0, toSend.length, device.port, device.address, error => {
             if (error) {
-                console.log("[GreeAC]: _sendBindRequest socket error", device, error);
+                console.log("[Sinclair AC]: _sendBindRequest socket error", device, error);
             }
         });
     }
@@ -141,7 +141,7 @@ class Device {
         var that = this;
         that.device.bound = true;
         that.device.key = key;
-        console.log('[GreeAC] device is bound: %s - %s', that.device.name, that.device.key);
+        console.log('[Sinclair AC] device is bound: %s - %s', that.device.name, that.device.key);
     }
 
     /**
@@ -168,7 +168,7 @@ class Device {
     _handleResponse(msg, rinfo) {
         var that = this;
         if (rinfo.address != that.options.host) {
-            console.log("[GreeAC] We received response from %s but we are looking for %s", rinfo.address, that.options.host);
+            console.log("[Sinclair AC] We received response from %s but we are looking for %s", rinfo.address, that.options.host);
             return;
         }
         const message = JSON.parse(msg + '');
@@ -177,7 +177,7 @@ class Device {
             const pack = encryptionService.decrypt(message, (that.device || {}).key);
             // If package type is response to handshake
             if (pack.t === 'dev') {
-                console.log('[GreeAC] response to handshake:{}', rinfo);
+                console.log('[Sinclair AC] response to handshake:{}', rinfo);
                 that._setDevice(message.cid, pack.name, rinfo.address, rinfo.port);
                 that._sendBindRequest(that.device);
                 return;
@@ -212,7 +212,7 @@ class Device {
             }
             that.options.onError(that.device);
         } catch (err) {
-            console.log("[GreeAC]: _handleResponse error", msg, rinfo, err);
+            console.log("[Sinclair AC]: _handleResponse error", msg, rinfo, err);
 
             that.options.onError(that.device);
         }
@@ -255,11 +255,11 @@ class Device {
         try {
             this.socket.send(serializedRequest, 0, serializedRequest.length, port, address, error => {
                 if (error) {
-                    console.log("[GreeAC]: _sendRequest socket error", error);
+                    console.log("[Sinclair AC]: _sendRequest socket error", error);
                 }
             });
         } catch (e) {
-            console.log("[GreeAC]: _sendRequest error", e);
+            console.log("[Sinclair AC]: _sendRequest error", e);
         }
     };
 

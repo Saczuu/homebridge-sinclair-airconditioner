@@ -41,7 +41,7 @@
             "acModel": {
               "type": "string",
               "title": "AC Model",
-              "placeholder": "v2"
+              "placeholder": "Sinclair Terrel"
             },
             "useTargetTempAsCurrent": {
               "type": "boolean",

@@ -18,45 +18,45 @@ module.exports = function (Service, Characteristic) {
         this.updateInterval = config.updateInterval || 10000;
         this.acTempSensorShift = config.acTempSensorShift || 40;
         this.useTargetTempAsCurrent = config.useTargetTempAsCurrent || false;
-        this.model = config.acModel || "Gree HeaterCooler";
+        this.model = config.acModel || "Sinclair Air Conditioner";
 
         this.services = [];
 
         // --- Initialize main HeaterCooler service ---
-        this.GreeACService = new Service.HeaterCooler(this.name);
+        this.ACService = new Service.HeaterCooler(this.name);
 
         // --- Active characteristic ---
-        this.GreeACService
+        this.ACService
             .getCharacteristic(Characteristic.Active)
             .on('get', this.getActive.bind(this))
             .on('set', this.setActive.bind(this));
 
         // --- Current HeaterCooler state ---
-        this.GreeACService
+        this.ACService
             .getCharacteristic(Characteristic.CurrentHeaterCoolerState)
             .on('get', this.getCurrentHeaterCoolerState.bind(this));
 
         // --- Target HeaterCooler state ---
-        this.GreeACService
+        this.ACService
             .getCharacteristic(Characteristic.TargetHeaterCoolerState)
             .on('get', this.getTargetHeaterCoolerState.bind(this))
             .on('set', this.setTargetHeaterCoolerState.bind(this));
 
         // --- Current temperature ---
-        this.GreeACService
+        this.ACService
             .getCharacteristic(Characteristic.CurrentTemperature)
             .setProps({ minValue: -100, maxValue: 100, minStep: 0.01 })
             .on('get', this.getCurrentTemperature.bind(this));
 
         // --- Temperature units ---
-        this.GreeACService
+        this.ACService
             .getCharacteristic(Characteristic.TemperatureDisplayUnits)
             .on('get', this.getTemperatureDisplayUnits.bind(this))
             .on('set', this.setTemperatureDisplayUnits.bind(this));
 
         // --- Cooling/Heating Threshold Temperature ---
         [Characteristic.CoolingThresholdTemperature, Characteristic.HeatingThresholdTemperature].forEach(char => {
-            this.GreeACService
+            this.ACService
                 .getCharacteristic(char)
                 .setProps({ minValue: 18, maxValue: 30, minStep: 1 })
                 .on('get', this.getTargetTemperature.bind(this))
@@ -64,13 +64,13 @@ module.exports = function (Service, Characteristic) {
         });
 
         // --- Swing Mode ---
-        this.GreeACService
+        this.ACService
             .getCharacteristic(Characteristic.SwingMode)
             .on('get', this.getSwingMode.bind(this))
             .on('set', this.setSwingMode.bind(this));
 
         // --- Fan Speed / RotationSpeed ---
-        this.GreeACService
+        this.ACService
             .getCharacteristic(Characteristic.RotationSpeed)
             .setProps({
                 unit: null,
@@ -83,7 +83,7 @@ module.exports = function (Service, Characteristic) {
             .on('set', this.setRotationSpeed.bind(this));
 
         // --- Add main service ---
-        this.services.push(this.GreeACService);
+        this.services.push(this.ACService);
         
         // --- Start device discovery ---
         this.discover();
@@ -112,48 +112,48 @@ module.exports = function (Service, Characteristic) {
                 updateInterval: me.updateInterval,
                 onStatus: (deviceModel) => {
                     me.getActive((x, val) => {
-                        me.GreeACService
+                        me.ACService
                         .getCharacteristic(Characteristic.Active)
                         .updateValue(val);
                     });
                     
                     me.getTargetHeaterCoolerState((x, val) => {
-                        me.GreeACService
+                        me.ACService
                         .getCharacteristic(Characteristic.TargetHeaterCoolerState)
                         .updateValue(val);
                     });
                     
                     me.getCurrentHeaterCoolerState((x, val) => {
-                        me.GreeACService
+                        me.ACService
                         .getCharacteristic(Characteristic.CurrentHeaterCoolerState)
                         .updateValue(val);
                     });
                     
                     me.getCurrentTemperature((x, val) => {
-                        me.GreeACService
+                        me.ACService
                         .getCharacteristic(Characteristic.CurrentTemperature)
                         .updateValue(val);
                     });
                     
                     
                     me.getTargetTemperature((x, val) => {
-                        me.GreeACService
+                        me.ACService
                         .getCharacteristic(Characteristic.CoolingThresholdTemperature)
                         .updateValue(val);
-                        me.GreeACService
+                        me.ACService
                         .getCharacteristic(Characteristic.HeatingThresholdTemperature)
                         .updateValue(val);
                     });
                     
                     
                     me.getSwingMode((x, val) => {
-                        me.GreeACService
+                        me.ACService
                         .getCharacteristic(Characteristic.SwingMode)
                         .updateValue(val);
                     });
                     
                     me.getRotationSpeed((x, val) => {
-                        me.GreeACService
+                        me.ACService
                         .getCharacteristic(Characteristic.RotationSpeed)
                         .updateValue(val);
                     });

@@ -1,25 +1,21 @@
 {
-    "bridge": {
-        "name": "Homebridge",
-        "username": "CC:22:3D:E3:CE:30",
-        "port": 51826,
-        "pin": "123-45-568"
-    },
-    "accessories": [
+    "platform": "SinclairPlatform",
+    "name": "Sinclair ACs",
+    "devices": [
         {
-            "accessory": "SinclairAirConditioner",
-            "host": "192.168.1.X",
-            "name": "Living room AC",
-            "acModel": "Gree V2",
-            "useTargetTempAsCurrent": true,
+            "name": "Living Room AC",
+            "host": "192.168.100.50",
+            "acModel": "Sinclair Terrel",
+            "useTargetTempAsCurrent": false,
+            "acTempSensorShift": 0,
             "updateInterval": 10000
         },
         {
-            "accessory": "SinclairAirConditioner",
-            "host": "192.168.1.Y",
             "name": "Bedroom AC",
-            "acModel": "C&H",
-            "acTempSensorShift": 40,
+            "host": "192.168.100.55",
+            "acModel": "Sinclair Classic",
+            "useTargetTempAsCurrent": false,
+            "acTempSensorShift": 0,
             "updateInterval": 10000
         }
     ]
