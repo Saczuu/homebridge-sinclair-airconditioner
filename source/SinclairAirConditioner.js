@@ -269,15 +269,28 @@ module.exports = function (Service, Characteristic) {
         },
         
         getTargetTemperature: function (callback) {
-            callback(null, this.device.getTemp());
+            // Get the device's temperature
+            let temp = this.device.getTemp() ?? 18;
+
+            // Clamp to HomeKit allowed range
+            if (temp < 18) temp = 18;
+            if (temp > 30) temp = 30;
+
+            callback(null, temp);
         },
-        
+
         setTargetTemperature: function (TargetTemperature, callback, context) {
             if (this._isContextValid(context)) {
-                this.device.setTemp(parseInt(TargetTemperature));
+                // Clamp incoming value to allowed range
+                let temp = parseInt(TargetTemperature);
+                if (temp < 18) temp = 18;
+                if (temp > 30) temp = 30;
+
+                this.device.setTemp(temp);
             }
             callback();
         },
+        
         getSwingMode: function (callback) {
             callback(null,
                      commands.swingVert.fixedValues.includes(this.device.getSwingVert())
