@@ -74,7 +74,7 @@ module.exports = function (Service, Characteristic) {
             .getCharacteristic(Characteristic.RotationSpeed)
             .setProps({
                 unit: null,
-                format: Characteristic.Formats.UINT8,
+                format: "uint8",
                 maxValue: 6,
                 minValue: 1,
                 validValues: [1, 2, 3, 4, 5, 6] // 6 = Auto
